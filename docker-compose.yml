@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # The Database Service
+  poll-db:
+    image: postgres:13
+    container_name: poll-db
+    environment:
+      # These environment variables are used by the PostgreSQL image and our backend app
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=polldb
+    volumes:
+      # This runs our init.sql script when the container first starts
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # This saves the database data to your local machine so it persists
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - poll-net
+
+  # The Backend API Service
+  poll-backend:
+    build: ./backend # Tells Docker Compose to build the image from the 'backend' folder's Dockerfile
+    container_name: poll-backend
+    ports:
+      - "5000:5000" # Maps port 5000 on your machine to port 5000 in the container
+    environment:
+      # Pass the same database credentials to the backend application
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=polldb
+    depends_on:
+      - poll-db # Ensures the database is started before the backend starts
+    networks:
+      - poll-net
+
+  # The Frontend Service
+  poll-frontend:
+    build: ./frontend # Tells Docker Compose to build from the 'frontend' folder
+    container_name: poll-frontend
+    ports:
+      - "8080:80" # Maps port 8080 on your machine to port 80 (standard HTTP) in the container
+    depends_on:
+      - poll-backend # Ensures the backend is ready before users can access the frontend
+    networks:
+      - poll-net
+
+# Define the network for our services to communicate
+networks:
+  poll-net:
+    driver: bridge
+
+# Define the volume for persistent database storage
+volumes:
+  postgres-data:

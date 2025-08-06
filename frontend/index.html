@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cloud-Native Poll</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; background-color: #f0f2f5; text-align: center; margin-top: 50px; }
+        .container { background-color: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: inline-block; }
+        h1 { color: #1c1e21; }
+        .poll-option { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; min-width: 300px; }
+        .poll-option span { font-size: 1.2em; }
+        button { background-color: #1877f2; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background-color 0.3s; }
+        button:hover { background-color: #166fe5; }
+        #status { margin-top: 20px; color: #606770; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Which is your favorite language?</h1>
+        <div id="poll-options">
+            </div>
+        <p id="status">Loading poll data...</p>
+    </div>
+
+    <script>
+        // The backend API will be running at this address inside our Docker network
+        const apiUrl = 'http://localhost:5000/poll';
+
+        // Function to fetch poll data and display it
+        async function fetchPollData() {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                const pollOptionsDiv = document.getElementById('poll-options');
+                pollOptionsDiv.innerHTML = ''; // Clear previous options
+
+                data.forEach(item => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'poll-option';
+                    optionDiv.innerHTML = `<span>${item.option} (${item.votes} votes)</span><button onclick="vote(${item.id})">Vote</button>`;
+                    pollOptionsDiv.appendChild(optionDiv);
+                });
+                document.getElementById('status').textContent = 'Please cast your vote!';
+            } catch (error) {
+                console.error('Error fetching poll data:', error);
+                document.getElementById('status').textContent = 'Could not load poll data. Is the backend running?';
+            }
+        }
+
+        // Function to cast a vote
+        async function vote(optionId) {
+            try {
+                document.getElementById('status').textContent = 'Casting your vote...';
+                await fetch(`${apiUrl}/${optionId}`, { method: 'POST' });
+                // After voting, refresh the poll data to show the new count
+                fetchPollData();
+            } catch (error) {
+                console.error('Error casting vote:', error);
+                document.getElementById('status').textContent = 'Error casting vote.';
+            }
+        }
+
+        // Load the poll data when the page loads
+        window.onload = fetchPollData;
+    </script>
+</body>
+</html>
